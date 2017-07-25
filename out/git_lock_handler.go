@@ -13,6 +13,7 @@ import (
 
 var ErrNoLocksAvailable = errors.New("no locks to claim")
 var ErrLockConflict = errors.New("pool state out of date")
+var ErrTransientError = errors.New("transient error")
 
 type GitLockHandler struct {
 	Source Source
@@ -101,13 +102,16 @@ func (glh *GitLockHandler) ResetLock() error {
 	_, err := glh.git("fetch", "origin", glh.Source.Branch)
 	if err != nil {
 		if strings.Contains(err.Error(), "exit status 128") {
-			return ErrLockConflict
+			return ErrTransientError
 		}
 		return err
 	}
 
 	_, err = glh.git("reset", "--hard", "origin/"+glh.Source.Branch)
 	if err != nil {
+		if strings.Contains(err.Error(), "exit status 128") {
+			return ErrTransientError
+		}
 		return err
 	}
 

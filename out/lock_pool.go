@@ -80,7 +80,7 @@ func (lp *LockPool) AcquireLock() (string, Version, error) {
 		var err error
 		lock, ref, err = lp.LockHandler.GrabAvailableLock()
 
-		if err == ErrNoLocksAvailable {
+		if err == ErrNoLocksAvailable || err == ErrTransientError {
 			fmt.Fprint(lp.Output, ".")
 			return true, nil
 		}
@@ -225,19 +225,19 @@ func (lp *LockPool) performRobustAction(action func() (bool, error)) error {
 	unexpectedErrorRetry := 0
 	for unexpectedErrorRetry < 5 {
 		err = lp.LockHandler.ResetLock()
-		if err == ErrLockConflict {
+		if err == ErrTransientError {
 			fmt.Fprint(lp.Output, ".")
 			time.Sleep(lp.Source.RetryDelay)
 			continue
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to reset lock: %s", err)
 		}
 
 		retry, err := action()
 
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to commit action: %s", err)
 		}
 
 		if retry {
