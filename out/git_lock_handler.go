@@ -100,6 +100,9 @@ func (glh *GitLockHandler) UnclaimLock(lockName string) (string, error) {
 func (glh *GitLockHandler) ResetLock() error {
 	_, err := glh.git("fetch", "origin", glh.Source.Branch)
 	if err != nil {
+		if strings.Contains(err.Error(), "exit status 128") {
+			return ErrLockConflict
+		}
 		return err
 	}
 

@@ -225,6 +225,11 @@ func (lp *LockPool) performRobustAction(action func() (bool, error)) error {
 	unexpectedErrorRetry := 0
 	for unexpectedErrorRetry < 5 {
 		err = lp.LockHandler.ResetLock()
+		if err == ErrLockConflict {
+			fmt.Fprint(lp.Output, ".")
+			time.Sleep(lp.Source.RetryDelay)
+			continue
+		}
 		if err != nil {
 			return err
 		}
